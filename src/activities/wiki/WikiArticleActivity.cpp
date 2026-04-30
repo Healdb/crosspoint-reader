@@ -90,6 +90,7 @@ void WikiArticleActivity::loop() {
   auto [prevTriggered, nextTriggered, fromTilt] = ReaderUtils::detectPageTurn(mappedInput);
 
   // Long press for article navigation (side buttons held > SKIP_ARTICLE_MS)
+  // Note: tilt page turn is not used for article skip (only for page turn via detectPageTurn above)
   if (!fromTilt && SETTINGS.longPressChapterSkip && mappedInput.getHeldTime() > SKIP_ARTICLE_MS) {
     const bool longNext = mappedInput.isPressed(MappedInputManager::Button::PageForward) ||
                           mappedInput.isPressed(MappedInputManager::Button::Right);

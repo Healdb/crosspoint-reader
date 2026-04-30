@@ -69,6 +69,7 @@ void SettingsActivity::onEnter() {
   // Initialize with first category (Display)
   currentSettings = &displaySettings;
   settingsCount = static_cast<int>(displaySettings.size());
+
   // Trigger first update
   requestUpdate();
 }

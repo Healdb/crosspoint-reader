@@ -11,8 +11,8 @@
 namespace {
 constexpr int WIKI_MENU_ITEMS = 1;
 const StrId wikiMenuNames[WIKI_MENU_ITEMS] = {StrId::STR_WIKI_LONG_PRESS_MODE};
-constexpr int WIKI_LONG_PRESS_ITEMS = 2;
-const StrId wikiLongPressNames[WIKI_LONG_PRESS_ITEMS] = {StrId::STR_WIKI_ALPHA_MODE, StrId::STR_WIKI_RANDOM_MODE};
+const StrId wikiLongPressNames[CrossPointSettings::WIKI_LONG_PRESS_COUNT] = {StrId::STR_WIKI_ALPHA_MODE,
+                                                                             StrId::STR_WIKI_RANDOM_MODE};
 }  // namespace
 
 void WikiReaderSettingsActivity::onEnter() {
@@ -58,7 +58,7 @@ void WikiReaderSettingsActivity::loop() {
 
 void WikiReaderSettingsActivity::handleSelection() {
   if (selectedIndex == 0) {
-    SETTINGS.wikiLongPressMode = (SETTINGS.wikiLongPressMode + 1) % WIKI_LONG_PRESS_ITEMS;
+    SETTINGS.wikiLongPressMode = (SETTINGS.wikiLongPressMode + 1) % CrossPointSettings::WIKI_LONG_PRESS_COUNT;
   }
   SETTINGS.saveToFile();
 }

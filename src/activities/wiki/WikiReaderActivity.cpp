@@ -5,6 +5,7 @@
 #include <I18n.h>
 #include <Logging.h>
 #include <WikiDatabase.h>
+#include <esp_system.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -32,6 +33,9 @@ void WikiReaderActivity::onEnter() {
   if (!dbAvailable) {
     LOG_ERR("WRA", "Wiki database not found at '%s'", SETTINGS.wikiDatabasePath);
   }
+
+  // Seed PRNG with hardware entropy once per activity entry
+  srand(esp_random());
 
   requestUpdate();
 }
@@ -195,18 +199,39 @@ void WikiReaderActivity::renderBrowseList() {
   if (browsePerPage < 1) browsePerPage = 1;
 
   const int articleCount = static_cast<int>(db.getArticleCount());
-  const int displayIndex = browseIndex - (browsePage * browsePerPage);
+  const int pageStart = browsePage * browsePerPage;
+  const int visibleItems = std::min(browsePerPage, articleCount - pageStart);
+  const int displayIndex = browseIndex - pageStart;
+
+  // Pre-load page titles from SD into heap-allocated buffers to avoid per-draw SD reads
+  // (stack limit is 256B; 12×128=1536B requires heap)
+  static constexpr int MAX_PER_PAGE = 12;
+  static constexpr size_t TITLE_BUF_LEN = 128;
+  const int loadItems = (visibleItems < MAX_PER_PAGE) ? visibleItems : MAX_PER_PAGE;
+
+  char* titleMem = static_cast<char*>(malloc(static_cast<size_t>(loadItems) * TITLE_BUF_LEN));
+  if (!titleMem) {
+    LOG_ERR("WRA", "Failed to allocate title buffer");
+    renderer.displayBuffer();
+    return;
+  }
+  memset(titleMem, 0, static_cast<size_t>(loadItems) * TITLE_BUF_LEN);
+  for (int i = 0; i < loadItems; i++) {
+    db.getArticleTitle(static_cast<uint32_t>(pageStart + i), titleMem + i * TITLE_BUF_LEN, TITLE_BUF_LEN);
+  }
 
   GUI.drawList(
-      renderer, Rect{0, contentTop, pageWidth, contentHeight}, std::min(browsePerPage, articleCount - browsePage * browsePerPage),
-      displayIndex,
-      [this](int index) -> std::string {
-        const uint32_t articleIdx = static_cast<uint32_t>(browsePage * browsePerPage + index);
-        char title[128] = "";
-        db.getArticleTitle(articleIdx, title, sizeof(title));
-        return std::string(title);
+      renderer, Rect{0, contentTop, pageWidth, contentHeight}, visibleItems, displayIndex,
+      [titleMem, loadItems](int index) -> std::string {
+        if (index >= 0 && index < loadItems) {
+          return std::string(titleMem + index * TITLE_BUF_LEN);
+        }
+        return {};
       },
       nullptr, nullptr, nullptr, false);
+
+  free(titleMem);
+  titleMem = nullptr;
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
