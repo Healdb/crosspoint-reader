@@ -69,6 +69,9 @@ python3 scripts/make_wiki_db.py enwiki-latest-articles.xml.bz2 /tmp/wiki_out \
     --max-articles 50000 \
     --max-article-bytes 32768
 
+# From a Kiwix ZIM file (see "Using Kiwix ZIM files" section below)
+python3 scripts/make_wiki_db.py wikipedia_en_simple_all_nopic.zim /tmp/wiki_out
+
 # From a plain-text dump (articles delimited by "== Title ==" lines)
 python3 scripts/make_wiki_db.py articles.txt /tmp/wiki_out
 
@@ -87,22 +90,85 @@ Then modify `strip_wikitext()` in the script to use it.
 
 ---
 
+## Using Kiwix ZIM Files
+
+[Kiwix](https://www.kiwix.org/) provides ready-to-download ZIM archives of
+Wikipedia — including a *text-only* (no pictures) edition that is much smaller
+than the full dump and already has images and media stripped out.  This is the
+recommended input for CrossPoint.
+
+### 1. Install the Python ZIM library
+
+```bash
+pip install libzim
+```
+
+### 2. Download a ZIM file
+
+Visit <https://library.kiwix.org/> and filter by:
+
+- **Language**: English (or your preferred language)
+- **Search**: `wikipedia_en_simple_all_nopic` (Simple English, no pictures)
+
+The "nopic" (no-pictures) variant is the best fit: it is compact and its
+articles contain only prose text.  Typical size is **400–900 MB** compressed.
+
+Direct link example:
+```
+https://download.kiwix.org/zim/wikipedia/wikipedia_en_simple_all_nopic_YYYY-MM.zim
+```
+
+### 3. Convert to CrossPoint format
+
+```bash
+python3 scripts/make_wiki_db.py wikipedia_en_simple_all_nopic_2024-10.zim ./wiki_db
+```
+
+Optional flags:
+
+```bash
+# Limit to first 50 000 articles (faster for testing)
+python3 scripts/make_wiki_db.py wikipedia_en_simple_all_nopic_2024-10.zim ./wiki_db \
+    --max-articles 50000
+
+# Increase per-article size limit (firmware cap is 32 768 bytes)
+python3 scripts/make_wiki_db.py wikipedia_en_simple_all_nopic_2024-10.zim ./wiki_db \
+    --max-article-bytes 32768
+```
+
+### 4. Copy to SD card
+
+```bash
+cp ./wiki_db/wiki.idx /media/sdcard/wiki/
+cp ./wiki_db/wiki.dat /media/sdcard/wiki/
+```
+
+### What the converter does
+
+1. Opens the ZIM archive and iterates all entries.
+2. Skips redirects, images, CSS, JavaScript, and any non-HTML entries.
+3. Strips all HTML tags from article content using Python's built-in
+   `html.parser` — no extra dependencies beyond `libzim`.
+4. Encodes the result as UTF-8, truncates to `--max-article-bytes`, and writes
+   it into the CrossPoint binary format.
+
+### Expected output size (Simple English Wikipedia, ~250 000 articles)
+
+| File | Size |
+|------|------|
+| `wiki.dat` | ~600 MB |
+| `wiki.idx` | ~15 MB |
+| SD card space needed | ~620 MB |
+
+The skip table held in DRAM will be ~8 KB for 250 000 articles — well within the
+380 KB RAM budget.
+
+---
+
 ## Recommended Database Sources
 
 | Source | Notes |
 |--------|-------|
 | [Wikipedia dumps](https://dumps.wikimedia.org/enwiki/latest/) | `enwiki-latest-articles.xml.bz2` — full English Wikipedia |
-| [Kiwix ZIM files](https://www.kiwix.org/en/content/) | Pre-filtered subsets (simple English, etc.) — requires separate extraction tooling |
-| [Simple English Wikipedia](https://dumps.wikimedia.org/simplewiki/latest/) | Smaller, simpler language — ideal for constrained storage |
-
-### Recommended starting point
-
-Simple English Wikipedia is the best fit for this device:
-
-```bash
-wget https://dumps.wikimedia.org/simplewiki/latest/simplewiki-latest-pages-articles.xml.bz2
-python3 scripts/make_wiki_db.py simplewiki-latest-pages-articles.xml.bz2 ./wiki_db
-```
-
-This produces a database of ~250 000 short articles that comfortably fits on a
-typical SD card and renders well on the e-ink display.
+| [Kiwix ZIM files](https://library.kiwix.org/) | `wikipedia_en_simple_all_nopic` — pre-filtered, no images, recommended |
+| [Simple English Wikipedia](https://dumps.wikimedia.org/simplewiki/latest/) | XML dump alternative — smaller vocabulary |
