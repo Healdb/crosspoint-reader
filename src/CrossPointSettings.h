@@ -139,6 +139,9 @@ class CrossPointSettings {
 
   enum TILT_PAGE_TURN { TILT_OFF = 0, TILT_NORMAL = 1, TILT_NVERTED = 2, TILT_PAGE_TURN_COUNT };
 
+  // WikiReader long-press navigation mode
+  enum WIKI_LONG_PRESS_MODE { WIKI_ALPHA = 0, WIKI_RANDOM = 1, WIKI_LONG_PRESS_COUNT };
+
   // Sleep screen settings
   uint8_t sleepScreen = DARK;
   // Sleep screen cover mode settings
@@ -203,6 +206,10 @@ class CrossPointSettings {
   uint8_t imageRendering = IMAGES_DISPLAY;
   // Tilt-based page turning (X3 only — requires QMI8658 IMU)
   uint8_t tiltPageTurn = TILT_OFF;
+
+  // WikiReader settings
+  uint8_t wikiLongPressMode = WIKI_ALPHA;
+  char wikiDatabasePath[64] = "/wiki";
 
   ~CrossPointSettings() = default;
 
