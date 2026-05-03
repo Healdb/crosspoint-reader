@@ -191,38 +191,46 @@ def parse_zim_dump(path: str, max_articles: int, max_bytes: int):
     total_entries = archive.entry_count
     print(f'ZIM archive contains {total_entries} entries (including redirects and assets)…')
 
+    # python-libzim 3.x exposes Archive.entries as the canonical iterable.
+    # Older builds expose get_entry_by_id(int) instead – fall back to that.
+    try:
+        entry_iter = archive.entries
+    except AttributeError:
+        print('  Note: archive.entries not available; falling back to get_entry_by_id '
+              '(older python-libzim).', file=sys.stderr)
+        entry_iter = (archive.get_entry_by_id(i) for i in range(total_entries))
+
     count = 0
     skipped = 0
 
-    for idx in range(total_entries):
-        entry = archive.get_entry_by_id(idx)
-
-        if entry.is_redirect:
-            skipped += 1
-            continue
-
-        item = entry.get_item()
-        if 'text/html' not in item.mimetype:
-            skipped += 1
-            continue
-
-        title = entry.title.strip()
-        if not title:
-            skipped += 1
-            continue
-
+    for entry in entry_iter:
         try:
+            if entry.is_redirect:
+                skipped += 1
+                continue
+
+            item = entry.get_item()
+            if 'text/html' not in item.mimetype:
+                skipped += 1
+                continue
+
+            title = entry.title.strip()
+            if not title:
+                skipped += 1
+                continue
+
             html_text = bytes(item.content).decode('utf-8', errors='replace')
-        except Exception:
+            plain_text = strip_html(html_text)
+            if not plain_text:
+                skipped += 1
+                continue
+
+            body_bytes = plain_text.encode('utf-8')[:max_bytes]
+        except Exception as exc:
+            print(f'  Warning: skipping entry ({type(exc).__name__}: {exc})', file=sys.stderr)
             skipped += 1
             continue
 
-        plain_text = strip_html(html_text)
-        if not plain_text:
-            skipped += 1
-            continue
-
-        body_bytes = plain_text.encode('utf-8')[:max_bytes]
         yield title, body_bytes
         count += 1
 
