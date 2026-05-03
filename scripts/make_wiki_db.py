@@ -188,17 +188,19 @@ def parse_zim_dump(path: str, max_articles: int, max_bytes: int):
         sys.exit(1)
 
     archive = Archive(path)
-    total_entries = archive.entry_count
+    # all_entry_count covers every dirent (all namespaces); entry_count only
+    # covers the user-namespace subset.  _get_entry_by_id() uses the global
+    # dirent index, so we must iterate over all_entry_count entries.
+    total_entries = archive.all_entry_count
     print(f'ZIM archive contains {total_entries} entries (including redirects and assets)…')
 
-    # python-libzim 3.x exposes Archive.entries as the canonical iterable.
-    # Older builds expose get_entry_by_id(int) instead – fall back to that.
+    # python-libzim exposes Archive.entries as the canonical iterable in some
+    # builds.  Current releases (3.x) only expose the private _get_entry_by_id
+    # method; fall back to that when the public attribute is absent.
     try:
         entry_iter = archive.entries
     except AttributeError:
-        print('  Note: archive.entries not available; falling back to get_entry_by_id '
-              '(older python-libzim).', file=sys.stderr)
-        entry_iter = (archive.get_entry_by_id(i) for i in range(total_entries))
+        entry_iter = (archive._get_entry_by_id(i) for i in range(total_entries))
 
     count = 0
     skipped = 0
