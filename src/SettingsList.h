@@ -84,7 +84,10 @@ inline const std::vector<SettingInfo>& getSettingsList() {
         SettingInfo::Toggle(StrId::STR_SHOW_HIDDEN_FILES, &CrossPointSettings::showHiddenFiles, "showHiddenFiles",
                             StrId::STR_CAT_SYSTEM),
 
-        // --- KOReader Sync (web-only, uses KOReaderCredentialStore) ---
+        // --- WikiReader ---
+        SettingInfo::Enum(StrId::STR_WIKI_LONG_PRESS_MODE, &CrossPointSettings::wikiLongPressMode,
+                          {StrId::STR_WIKI_ALPHA_MODE, StrId::STR_WIKI_RANDOM_MODE}, "wikiLongPressMode",
+                          StrId::STR_CAT_WIKI),
         SettingInfo::DynamicString(
             StrId::STR_KOREADER_USERNAME, [] { return KOREADER_STORE.getUsername(); },
             [](const std::string& v) {

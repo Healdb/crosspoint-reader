@@ -13,12 +13,14 @@
 #include "OtaUpdateActivity.h"
 #include "SettingsList.h"
 #include "StatusBarSettingsActivity.h"
+#include "WikiReaderSettingsActivity.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
 const StrId SettingsActivity::categoryNames[categoryCount] = {StrId::STR_CAT_DISPLAY, StrId::STR_CAT_READER,
-                                                              StrId::STR_CAT_CONTROLS, StrId::STR_CAT_SYSTEM};
+                                                              StrId::STR_CAT_CONTROLS, StrId::STR_CAT_SYSTEM,
+                                                              StrId::STR_CAT_WIKI};
 
 void SettingsActivity::onEnter() {
   Activity::onEnter();
@@ -28,6 +30,7 @@ void SettingsActivity::onEnter() {
   readerSettings.clear();
   controlsSettings.clear();
   systemSettings.clear();
+  wikiSettings.clear();
 
   for (const auto& setting : getSettingsList()) {
     if (setting.category == StrId::STR_NONE_OPT) continue;
@@ -39,6 +42,8 @@ void SettingsActivity::onEnter() {
       controlsSettings.push_back(setting);
     } else if (setting.category == StrId::STR_CAT_SYSTEM) {
       systemSettings.push_back(setting);
+    } else if (setting.category == StrId::STR_CAT_WIKI) {
+      wikiSettings.push_back(setting);
     }
     // Web-only categories (KOReader Sync, OPDS Browser) are skipped for device UI
   }
@@ -53,6 +58,9 @@ void SettingsActivity::onEnter() {
   systemSettings.push_back(SettingInfo::Action(StrId::STR_CHECK_UPDATES, SettingAction::CheckForUpdates));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_LANGUAGE, SettingAction::Language));
   readerSettings.push_back(SettingInfo::Action(StrId::STR_CUSTOMISE_STATUS_BAR, SettingAction::CustomiseStatusBar));
+
+  // WikiReader action
+  wikiSettings.push_back(SettingInfo::Action(StrId::STR_WIKI_READER, SettingAction::WikiReaderSettings));
 
   // Reset selection to first category
   selectedCategoryIndex = 0;
@@ -137,6 +145,9 @@ void SettingsActivity::loop() {
       case 3:
         currentSettings = &systemSettings;
         break;
+      case 4:
+        currentSettings = &wikiSettings;
+        break;
     }
     settingsCount = static_cast<int>(currentSettings->size());
   }
@@ -191,6 +202,9 @@ void SettingsActivity::toggleCurrentSetting() {
         break;
       case SettingAction::Language:
         startActivityForResult(std::make_unique<LanguageSelectActivity>(renderer, mappedInput), resultHandler);
+        break;
+      case SettingAction::WikiReaderSettings:
+        startActivityForResult(std::make_unique<WikiReaderSettingsActivity>(renderer, mappedInput), resultHandler);
         break;
       case SettingAction::None:
         // Do nothing

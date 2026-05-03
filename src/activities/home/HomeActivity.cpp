@@ -28,6 +28,9 @@ int HomeActivity::getMenuItemCount() const {
   if (hasOpdsServers) {
     count++;
   }
+  if (hasWikiDb) {
+    count++;
+  }
   return count;
 }
 
@@ -112,6 +115,7 @@ void HomeActivity::onEnter() {
   Activity::onEnter();
 
   hasOpdsServers = OPDS_STORE.hasServers();
+  hasWikiDb = Storage.exists(SETTINGS.wikiDatabasePath);
 
   selectorIndex = 0;
 
@@ -192,6 +196,7 @@ void HomeActivity::loop() {
     const int recentsIdx = idx++;
     const int opdsLibraryIdx = hasOpdsServers ? idx++ : -1;
     const int fileTransferIdx = idx++;
+    const int wikiReaderIdx = hasWikiDb ? idx++ : -1;
     const int settingsIdx = idx;
 
     if (selectorIndex < recentBooks.size()) {
@@ -204,6 +209,8 @@ void HomeActivity::loop() {
       onOpdsBrowserOpen();
     } else if (menuSelectedIndex == fileTransferIdx) {
       onFileTransferOpen();
+    } else if (menuSelectedIndex == wikiReaderIdx) {
+      onWikiReaderOpen();
     } else if (menuSelectedIndex == settingsIdx) {
       onSettingsOpen();
     }
@@ -233,6 +240,12 @@ void HomeActivity::render(RenderLock&&) {
   if (hasOpdsServers) {
     menuItems.insert(menuItems.begin() + 2, tr(STR_OPDS_BROWSER));
     menuIcons.insert(menuIcons.begin() + 2, Library);
+  }
+
+  if (hasWikiDb) {
+    // Insert WikiReader before Settings (second-to-last position)
+    menuItems.insert(menuItems.end() - 1, tr(STR_WIKI_READER));
+    menuIcons.insert(menuIcons.end() - 1, Book);
   }
 
   if (metrics.homeContinueReadingInMenu) {
@@ -276,3 +289,5 @@ void HomeActivity::onSettingsOpen() { activityManager.goToSettings(); }
 void HomeActivity::onFileTransferOpen() { activityManager.goToFileTransfer(); }
 
 void HomeActivity::onOpdsBrowserOpen() { activityManager.goToBrowser(); }
+
+void HomeActivity::onWikiReaderOpen() { activityManager.goToWikiReader(); }
